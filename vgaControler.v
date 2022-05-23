@@ -52,6 +52,11 @@ reg [3:0] nextAh;
 reg [3:0] curAv;
 reg [3:0] nextAv;
 
+reg [3:0] curBh;
+reg [3:0] nextBh;
+reg [3:0] curBv;
+reg [3:0] nextBv;
+
 reg [3:0] displayNum;
 wire [3:0] dummyLed;
 wire [3:0] dummyAN;
@@ -85,19 +90,31 @@ pixel_gen pixel_gen_inst(
 vga_controller   vga_inst(.pclk(clk_25MHz),.reset(rst),.hsync(hsync),.vsync(vsync),.valid(valid),.h_cnt(h_cnt),.v_cnt(v_cnt));
       
 KeyboardDecoder KEYBOARDDECODER(.key_down(key_down),.last_change(last_change),.key_valid(key_valid),.PS2_DATA(PS2_DATA),.PS2_CLK(PS2_CLK),.rst(rst),.clk(clk));
-parameter cntHead = 27;
-reg [cntHead:0] cntTime;
+parameter cntHead = 25;
+reg [cntHead:0] cntATime;
+reg [cntHead:0] cntBTime;
 always @(posedge clk) begin
     if(rst)begin
-        cntTime <= 0;
+        cntATime <= 0;
+        cntBTime <= 0;
     end else begin
         if(curAh!=nextAh || curAv!=nextAv)begin
-            cntTime <= 0;
+            cntATime <= 0;
         end else begin
-            if(cntTime=={(cntHead+1){1'b1}})begin//cd time for pressing the button
-                cntTime <= cntTime;
+            if(cntATime=={(cntHead+1){1'b1}})begin//cd time for pressing the button
+                cntATime <= cntATime;
             end else begin
-                cntTime <= cntTime + 1; 
+                cntATime <= cntATime + 1; 
+            end
+        end
+
+        if(curBh!=nextBh || curBv!=nextBv)begin
+            cntBTime <= 0;
+        end else begin
+            if(cntBTime=={(cntHead+1){1'b1}})begin//cd time for pressing the button
+                cntBTime <= cntBTime;
+            end else begin
+                cntBTime <= cntBTime + 1; 
             end
         end
     end
@@ -112,7 +129,7 @@ always @(posedge clk) begin
 end
 
 always @(*) begin
-    if(cntTime[cntHead])begin
+    if(cntATime[cntHead])begin
         if(curKey==`ONE)begin
             if(curAh<=`HMINTILE)begin
                 nextAh = `HMINTILE;
@@ -142,7 +159,7 @@ always @(posedge clk) begin
 end
 
 always @(*) begin
-    if(cntTime[cntHead])begin
+    if(cntATime[cntHead])begin
         if(curKey==`FIVE)begin
             if(curAv<`VMAXTILE)begin
                 nextAv = curAv + 1;

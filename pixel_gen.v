@@ -1,4 +1,6 @@
-`define UNIT 10'd64 
+`define UNIT 10'd64
+`define HALFUNIT 10'd32 
+`define QUARTERUNIT 10'd16
 `define ZERO  4'b0000
 `define ONE   4'b0001
 `define TWO   4'b0010
@@ -34,7 +36,9 @@ output reg [3:0] vgaBlue
 
 reg [3:0] hMap;
 reg [3:0] vMap;
-
+reg [9:0] centerAh;
+reg [9:0] centerAv;
+reg [19:0] playCircle;
 always @(*) begin
     if(!valid)begin
         hMap = 15;
@@ -64,10 +68,16 @@ always @(*) begin
 end
 
 always @(*) begin
+    centerAh = curAh*`UNIT+`HALFUNIT;
+    centerAv = curAv*`UNIT+`HALFUNIT;
+    playCircle = (centerAh-h_cnt)*(centerAh-h_cnt) + (centerAv-v_cnt)*(centerAv-v_cnt);
+end
+
+always @(*) begin
     if(hMap==`NODIS || vMap==`NODIS)begin
         {vgaRed, vgaGreen, vgaBlue} = `BLOCK;
     end else begin
-        if(curAh==hMap && curAv==vMap)begin
+        if(curAh==hMap && curAv==vMap && (playCircle<`QUARTERUNIT*`QUARTERUNIT))begin
             {vgaRed, vgaGreen, vgaBlue} = `A;
         end else begin
             if(hMap%3==0)begin
