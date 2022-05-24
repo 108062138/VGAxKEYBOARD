@@ -1,14 +1,14 @@
-`define ZERO  4'b0000
+`define SHIFT 4'b0000
 `define ONE   4'b0001
 `define TWO   4'b0010
 `define THREE 4'b0011
-`define FOUR  4'b0100
 `define FIVE  4'b0101
-`define SIX   4'b0110
-`define SEVEN 4'b0111
-`define EIGHT 4'b1000
-`define NINE  4'b1001
-`define TEN   4'b1010
+
+`define BUP    4'b0110
+`define BDOWN  4'b0111
+`define BLEFT  4'b1000
+`define BRIGHT 4'b1001
+`define SPACE  4'b1010
 
 `define ADD   4'b1011
 `define MINUS 4'b1100
@@ -20,6 +20,9 @@
 `define VMAXTILE 4'd5
 `define HMINTILE 4'd0
 `define VMINTILE 4'd0
+
+`define PLAYERA 2'b00
+`define PLAYERB 2'b01
 
 module top(
 input clk,
@@ -47,15 +50,11 @@ wire key_valid;
 reg [3:0] curKey;
 reg [3:0] nextKey;
 
-reg [3:0] curAh;
-reg [3:0] nextAh;
-reg [3:0] curAv;
-reg [3:0] nextAv;
+wire [3:0] curAh;
+wire [3:0] curAv;
 
-reg [3:0] curBh;
-reg [3:0] nextBh;
-reg [3:0] curBv;
-reg [3:0] nextBv;
+wire [3:0] curBh;
+wire [3:0] curBv;
 
 reg [3:0] displayNum;
 wire [3:0] dummyLed;
@@ -81,6 +80,8 @@ pixel_gen pixel_gen_inst(
 .v_cnt(v_cnt),
 .curAh(curAh),
 .curAv(curAv),
+.curBh(curBh),
+.curBv(curBv),
 .valid(valid),
 .vgaRed(vgaRed),
 .vgaGreen(vgaGreen),
@@ -90,95 +91,30 @@ pixel_gen pixel_gen_inst(
 vga_controller   vga_inst(.pclk(clk_25MHz),.reset(rst),.hsync(hsync),.vsync(vsync),.valid(valid),.h_cnt(h_cnt),.v_cnt(v_cnt));
       
 KeyboardDecoder KEYBOARDDECODER(.key_down(key_down),.last_change(last_change),.key_valid(key_valid),.PS2_DATA(PS2_DATA),.PS2_CLK(PS2_CLK),.rst(rst),.clk(clk));
-parameter cntHead = 25;
-reg [cntHead:0] cntATime;
-reg [cntHead:0] cntBTime;
-always @(posedge clk) begin
-    if(rst)begin
-        cntATime <= 0;
-        cntBTime <= 0;
-    end else begin
-        if(curAh!=nextAh || curAv!=nextAv)begin
-            cntATime <= 0;
-        end else begin
-            if(cntATime=={(cntHead+1){1'b1}})begin//cd time for pressing the button
-                cntATime <= cntATime;
-            end else begin
-                cntATime <= cntATime + 1; 
-            end
-        end
 
-        if(curBh!=nextBh || curBv!=nextBv)begin
-            cntBTime <= 0;
-        end else begin
-            if(cntBTime=={(cntHead+1){1'b1}})begin//cd time for pressing the button
-                cntBTime <= cntBTime;
-            end else begin
-                cntBTime <= cntBTime + 1; 
-            end
-        end
-    end
-end
+player PLAYERA(
+.clk(clk),
+.rst(rst),
+.user(`PLAYERA),
+.up(curKey==`FIVE),
+.down(curKey==`TWO),
+.left(curKey==`ONE),
+.right(curKey==`THREE),
+.curh(curAh),
+.curv(curAv)
+);
 
-always @(posedge clk) begin
-    if(rst)begin
-        curAh <= `HMINTILE;
-    end else begin
-        curAh <= nextAh;
-    end
-end
-
-always @(*) begin
-    if(cntATime[cntHead])begin
-        if(curKey==`ONE)begin
-            if(curAh<=`HMINTILE)begin
-                nextAh = `HMINTILE;
-            end else begin
-                nextAh = curAh -1;
-            end
-        end else if(curKey==`THREE)begin
-            if(curAh<`HMAXTILE)begin
-                nextAh = curAh + 1;
-            end else begin
-                nextAh = `HMAXTILE;
-            end
-        end else begin
-            nextAh = curAh;
-        end
-    end else begin
-        nextAh = curAh;
-    end
-end
-
-always @(posedge clk) begin
-    if(rst)begin
-        curAv <= `VMINTILE;
-    end else begin
-        curAv <= nextAv;
-    end
-end
-
-always @(*) begin
-    if(cntATime[cntHead])begin
-        if(curKey==`FIVE)begin
-            if(curAv<`VMAXTILE)begin
-                nextAv = curAv + 1;
-            end else begin
-                nextAv = `VMAXTILE;
-            end
-        end else if(curKey==`TWO)begin
-            if(curAv<=`VMINTILE)begin
-                nextAv = `VMINTILE;
-            end else begin
-                nextAv = curAv - 1;
-            end
-        end else begin
-            nextAv = curAv;
-        end
-    end else begin
-        nextAv = curAv;
-    end
-end
+player PLAYERB(
+.clk(clk),
+.rst(rst),
+.user(`PLAYERB),
+.up(curKey==`BUP),
+.down(curKey==`BDOWN),
+.left(curKey==`BLEFT),
+.right(curKey==`BRIGHT),
+.curh(curBh),
+.curv(curBv)
+);
 
 always @(posedge clk) begin
     if(rst)begin
@@ -200,8 +136,8 @@ always @(*) begin
         end else begin
             //hadn't been press 
             case (last_change[7:0])
-                8'h70:begin
-                    nextKey = `ZERO; 
+                8'h59:begin
+                    nextKey = `SHIFT; 
                 end
                 8'h69:begin
                     nextKey = `ONE;
@@ -212,39 +148,24 @@ always @(*) begin
                 8'h7A:begin
                     nextKey = `THREE;
                 end
-                8'h6B:begin
-                    nextKey = `FOUR;
-                end
                 8'h73:begin
                     nextKey = `FIVE;
                 end
-                8'h74:begin
-                    nextKey = `SIX;
+
+                8'h1D:begin
+                    nextKey = `BUP;
                 end
-                8'h6C:begin
-                    nextKey = `SEVEN;
+                8'h1B:begin
+                    nextKey = `BDOWN;
                 end
-                8'h75:begin
-                    nextKey = `EIGHT;
+                8'h1C:begin
+                    nextKey = `BLEFT;
                 end
-                8'h7D:begin
-                    nextKey = `NINE;
+                8'h23:begin
+                    nextKey = `BRIGHT;
                 end
-                8'h5A:begin
-                    if(last_change[8]==0)begin
-                        nextKey = `ENTER;
-                    end else begin
-                        nextKey = `WAIT;
-                    end
-                end
-                8'h79:begin
-                    nextKey = `ADD;
-                end
-                8'h7B:begin
-                    nextKey = `MINUS;
-                end
-                8'h7C:begin
-                    nextKey = `MUL;
+                8'h29:begin
+                    nextKey = `SPACE;
                 end
                 default: begin
                     nextKey = `WAIT;
@@ -258,16 +179,16 @@ end
 always @(*) begin
     case (AN[3:0])
       4'b1110:begin
-          displayNum = curKey;
+          displayNum = curBv;
       end 
       4'b1101:begin
-          displayNum = 4'b1111;
+          displayNum = curBh;
       end
       4'b1011:begin
-          displayNum = curAv;
+          displayNum = `WAIT;
       end 
       default:begin
-          displayNum = curAh;
+          displayNum = curKey;
       end 
     endcase
 end

@@ -18,6 +18,7 @@
 `define WATER 12'h0f0
 `define NODIS 4'd15
 `define A 12'h39
+`define B 12'h123
 `define HMAXTILE 4'd9
 `define VMAXTILE 4'd5
 `define HMINTILE 4'd0
@@ -28,6 +29,8 @@ input [9:0] h_cnt,
 input [9:0] v_cnt,
 input [3:0] curAh,
 input [3:0] curAv,
+input [3:0] curBh,
+input [3:0] curBv,
 input valid,
 output reg [3:0] vgaRed,
 output reg [3:0] vgaGreen,
@@ -36,9 +39,15 @@ output reg [3:0] vgaBlue
 
 reg [3:0] hMap;
 reg [3:0] vMap;
+
 reg [9:0] centerAh;
 reg [9:0] centerAv;
-reg [19:0] playCircle;
+reg [19:0] playerACircle;
+
+reg [9:0] centerBh;
+reg [9:0] centerBv;
+reg [19:0] playerBCircle;
+
 always @(*) begin
     if(!valid)begin
         hMap = 15;
@@ -70,15 +79,21 @@ end
 always @(*) begin
     centerAh = curAh*`UNIT+`HALFUNIT;
     centerAv = curAv*`UNIT+`HALFUNIT;
-    playCircle = (centerAh-h_cnt)*(centerAh-h_cnt) + (centerAv-v_cnt)*(centerAv-v_cnt);
+    playerACircle = (centerAh-h_cnt)*(centerAh-h_cnt) + (centerAv-v_cnt)*(centerAv-v_cnt);
+
+    centerBh = curBh*`UNIT+`HALFUNIT;
+    centerBv = curBv*`UNIT+`HALFUNIT;
+    playerBCircle = (centerBh-h_cnt)*(centerBh-h_cnt) + (centerBv-v_cnt)*(centerBv-v_cnt);
 end
 
 always @(*) begin
     if(hMap==`NODIS || vMap==`NODIS)begin
         {vgaRed, vgaGreen, vgaBlue} = `BLOCK;
     end else begin
-        if(curAh==hMap && curAv==vMap && (playCircle<`QUARTERUNIT*`QUARTERUNIT))begin
+        if(curAh==hMap && curAv==vMap && (playerACircle<`QUARTERUNIT*`QUARTERUNIT))begin
             {vgaRed, vgaGreen, vgaBlue} = `A;
+        end else if(curBh==hMap && curBv==vMap && (playerBCircle<`QUARTERUNIT*`QUARTERUNIT))begin 
+            {vgaRed, vgaGreen, vgaBlue} = `B;
         end else begin
             if(hMap%3==0)begin
                 {vgaRed, vgaGreen, vgaBlue} = `WATER;
