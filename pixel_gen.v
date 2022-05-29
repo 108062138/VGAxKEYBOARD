@@ -17,6 +17,7 @@
 `define BLOCKCOLOR 12'h000
 `define BOXCOLOR   12'h669
 `define WATERCOLOR 12'h0f0
+
 `define ACOLOR     12'h6f3
 `define BCOLOR     12'hf55
 
@@ -25,6 +26,7 @@
 `define BOX0 4'b0000
 `define BOX1 4'b0001
 `define BOX2 4'b0010
+`define KILL 4'b0011
 `define WALKOK 4'b1110
 `define BLOCK  4'b1111
 
@@ -38,6 +40,8 @@ input [3:0] curBv,
 input valid,
 input clk,
 input rst,
+input wire atkFromA,
+input wire atkFromB,
 output reg [3:0] vgaRed,
 output reg [3:0] vgaGreen,
 output reg [3:0] vgaBlue,
@@ -111,6 +115,8 @@ always @(*) begin
                 {vgaRed, vgaGreen, vgaBlue} = `BLOCK;
             end else if(boxes[vMap][hMap]) begin
                 {vgaRed, vgaGreen, vgaBlue} = `BOXCOLOR;
+            end else if(map[vMap][hMap]==`KILL)begin
+                {vgaRed, vgaGreen, vgaBlue} = `WATERCOLOR;
             end else begin
                 {vgaRed, vgaGreen, vgaBlue} = `PATHCOLOR;
             end
@@ -297,7 +303,21 @@ end
 always @(*) begin
     for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
         for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
-            nextMap[v][h] = map[v][h];
+            if(atkFromA)begin
+                if(curAh==h&&curAv==v)begin
+                    nextMap[v][h] = `KILL;
+                end else begin
+                    nextMap[v][h] = map[v][h];
+                end
+            end else if(atkFromB)begin
+                if(curBh==h&&curBv==v)begin
+                    nextMap[v][h] = `KILL;
+                end else begin
+                    nextMap[v][h] = map[v][h];
+                end
+            end else begin
+                nextMap[v][h] = map[v][h];
+            end
         end
     end
 end

@@ -366,5 +366,5 @@ set_property PACKAGE_PIN W7 [get_ports {SSD[0]}]
 
 set_property IOSTANDARD LVCMOS33 [get_ports dBtn]
 set_property IOSTANDARD LVCMOS33 [get_ports uBtn]
-set_property PACKAGE_PIN U17 [get_ports dBtn]
+set_property PACKAGE_PIN U18 [get_ports dBtn]
 set_property PACKAGE_PIN T18 [get_ports uBtn]

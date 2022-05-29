@@ -53,9 +53,12 @@ wire [3:0] nextKey;
 
 wire [3:0] curAh;
 wire [3:0] curAv;
-
+wire [3:0] aNumOfBumbs;
 wire [3:0] curBh;
 wire [3:0] curBv;
+wire [3:0] bNumOfBumbs;
+
+wire ABomb,BBomb;
 
 reg [3:0] displayNum;
 wire [3:0] dummyLed;
@@ -107,14 +110,21 @@ onePulse OPDOWN(
 
 always @(*) begin
     led[15:12] = showLed;
-    case (showLed)
-        `ZERO:   led[9:0] = walkAble[ 9: 0];
-        `ONE:    led[9:0] = walkAble[19:10];
-        `TWO:    led[9:0] = walkAble[29:20];
-        `THREE:  led[9:0] = walkAble[39:30];
-        `FOUR:   led[9:0] = walkAble[49:40];
-        default: led[9:0] = walkAble[59:50];
-    endcase
+    
+    led[9] = ABomb;
+    led[8:5] = aNumOfBumbs;
+
+    led[4] = BBomb;
+    led[3:0] = bNumOfBumbs;
+    //show map
+    //case (showLed)
+    //    `ZERO:   led[9:0] = walkAble[ 9: 0];
+    //    `ONE:    led[9:0] = walkAble[19:10];
+    //    `TWO:    led[9:0] = walkAble[29:20];
+    //    `THREE:  led[9:0] = walkAble[39:30];
+    //    `FOUR:   led[9:0] = walkAble[49:40];
+    //    default: led[9:0] = walkAble[59:50];
+    //endcase
 end
 
 always @(posedge clk1hz) begin
@@ -154,6 +164,8 @@ pixel_gen pixel_gen_inst(
 .valid(valid),
 .clk(clk),
 .rst(rst),
+.atkFromA(ABomb),
+.atkFromB(BBomb),
 .vgaRed(vgaRed),
 .vgaGreen(vgaGreen),
 .vgaBlue(vgaBlue),
@@ -172,9 +184,12 @@ player PLAYERA(
 .down(curKey==`TWO),
 .left(curKey==`ONE),
 .right(curKey==`THREE),
+.attack(curKey==`SHIFT),
 .walkAble(walkAble),
 .curh(curAh),
-.curv(curAv)
+.curv(curAv),
+.placeBomb(ABomb),
+.numBomb(aNumOfBumbs)
 );
 
 player PLAYERB(
@@ -185,9 +200,12 @@ player PLAYERB(
 .down(curKey==`BDOWN),
 .left(curKey==`BLEFT),
 .right(curKey==`BRIGHT),
+.attack(curKey==`SPACE),
 .walkAble(walkAble),
 .curh(curBh),
-.curv(curBv)
+.curv(curBv),
+.placeBomb(BBomb),
+.numBomb(bNumOfBumbs)
 );
 
 always @(*) begin
