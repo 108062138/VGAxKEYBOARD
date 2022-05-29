@@ -13,16 +13,20 @@
 `define NINE  4'b1001
 `define TEN   4'b1010
 
-`define PATH 12'hfff
-`define BLOCK 12'h0
-`define WATER 12'h0f0
+`define PATHCOLOR  12'hfff
+`define BLOCKCOLOR 12'h000
+`define BOXCOLOR   12'h669
+`define WATERCOLOR 12'h0f0
+`define ACOLOR     12'h6f3
+`define BCOLOR     12'hf55
+
 `define NODIS 4'd15
-`define A 12'h39
-`define B 12'h123
-`define HMAXTILE 4'd9
-`define VMAXTILE 4'd5
-`define HMINTILE 4'd0
-`define VMINTILE 4'd0
+
+`define BOX0 4'b0000
+`define BOX1 4'b0001
+`define BOX2 4'b0010
+`define WALKOK 4'b1110
+`define BLOCK  4'b1111
 
 module pixel_gen(
 input [9:0] h_cnt,
@@ -32,10 +36,18 @@ input [3:0] curAv,
 input [3:0] curBh,
 input [3:0] curBv,
 input valid,
+input clk,
+input rst,
 output reg [3:0] vgaRed,
 output reg [3:0] vgaGreen,
-output reg [3:0] vgaBlue
+output reg [3:0] vgaBlue,
+output reg [(HMAXTILE+1)*(VMAXTILE+1):0] walkAble
 );
+
+parameter HMAXTILE  = 9;
+parameter VMAXTILE  = 5;
+parameter HMINTILE  = 0;
+parameter VMINTILE  = 0;
 
 reg [3:0] hMap;
 reg [3:0] vMap;
@@ -91,19 +103,17 @@ always @(*) begin
         {vgaRed, vgaGreen, vgaBlue} = `BLOCK;
     end else begin
         if(curAh==hMap && curAv==vMap && (playerACircle<`QUARTERUNIT*`QUARTERUNIT))begin
-            {vgaRed, vgaGreen, vgaBlue} = `A;
+            {vgaRed, vgaGreen, vgaBlue} = `ACOLOR;
         end else if(curBh==hMap && curBv==vMap && (playerBCircle<`QUARTERUNIT*`QUARTERUNIT))begin 
-            {vgaRed, vgaGreen, vgaBlue} = `B;
+            {vgaRed, vgaGreen, vgaBlue} = `BCOLOR;
         end else begin
-            if(hMap%3==0)begin
-                {vgaRed, vgaGreen, vgaBlue} = `WATER;
+            if(blocks[vMap][hMap])begin
+                {vgaRed, vgaGreen, vgaBlue} = `BLOCK;
+            end else if(boxes[vMap][hMap]) begin
+                {vgaRed, vgaGreen, vgaBlue} = `BOXCOLOR;
             end else begin
-                if(vMap%4==0)begin
-                    {vgaRed, vgaGreen, vgaBlue} = `BLOCK;
-                end else begin
-                    {vgaRed, vgaGreen, vgaBlue} = `PATH;
-                end
-            end 
+                {vgaRed, vgaGreen, vgaBlue} = `PATHCOLOR;
+            end
         end
     end
 end
@@ -127,4 +137,181 @@ always @(*) begin
         vMap = 15;
     end
 end
+
+reg [3:0] map [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
+reg [3:0] nextMap [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
+reg blocks [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
+reg boxes [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
+
+always @(*) begin
+    //block definition
+    blocks[0][0] = 0;
+    blocks[0][1] = 0;
+    blocks[0][2] = 0;
+    blocks[0][3] = 0;
+    blocks[0][4] = 0;
+    blocks[0][5] = 0;
+    blocks[0][6] = 0;
+    blocks[0][7] = 0;
+    blocks[0][8] = 0;
+    blocks[0][9] = 0;
+    blocks[1][0] = 0;
+    blocks[1][1] = 1;
+    blocks[1][2] = 1;
+    blocks[1][3] = 0;
+    blocks[1][4] = 0;
+    blocks[1][5] = 0;
+    blocks[1][6] = 0;
+    blocks[1][7] = 0;
+    blocks[1][8] = 0;
+    blocks[1][9] = 0;
+    blocks[2][0] = 0;
+    blocks[2][1] = 1;
+    blocks[2][2] = 0;
+    blocks[2][3] = 0;
+    blocks[2][4] = 0;
+    blocks[2][5] = 0;
+    blocks[2][6] = 0;
+    blocks[2][7] = 0;
+    blocks[2][8] = 0;
+    blocks[2][9] = 0;
+    blocks[3][0] = 0;
+    blocks[3][1] = 0;
+    blocks[3][2] = 0;
+    blocks[3][3] = 0;
+    blocks[3][4] = 0;
+    blocks[3][5] = 0;
+    blocks[3][6] = 0;
+    blocks[3][7] = 0;
+    blocks[3][8] = 1;
+    blocks[3][9] = 0;
+    blocks[4][0] = 0;
+    blocks[4][1] = 0;
+    blocks[4][2] = 0;
+    blocks[4][3] = 0;
+    blocks[4][4] = 0;
+    blocks[4][5] = 0;
+    blocks[4][6] = 0;
+    blocks[4][7] = 1;
+    blocks[4][8] = 1;
+    blocks[4][9] = 0;
+    blocks[5][0] = 0;
+    blocks[5][1] = 0;
+    blocks[5][2] = 0;
+    blocks[5][3] = 0;
+    blocks[5][4] = 0;
+    blocks[5][5] = 0;
+    blocks[5][6] = 0;
+    blocks[5][7] = 0;
+    blocks[5][8] = 0;
+    blocks[5][9] = 0;
+
+    //boxes
+    //block definition
+    boxes[0][0] = 0;
+    boxes[0][1] = 0;
+    boxes[0][2] = 0;
+    boxes[0][3] = 0;
+    boxes[0][4] = 1;
+    boxes[0][5] = 0;
+    boxes[0][6] = 0;
+    boxes[0][7] = 0;
+    boxes[0][8] = 0;
+    boxes[0][9] = 0;
+    boxes[1][0] = 0;
+    boxes[1][1] = 0;
+    boxes[1][2] = 0;
+    boxes[1][3] = 0;
+    boxes[1][4] = 1;
+    boxes[1][5] = 1;
+    boxes[1][6] = 0;
+    boxes[1][7] = 1;
+    boxes[1][8] = 1;
+    boxes[1][9] = 0;
+    boxes[2][0] = 0;
+    boxes[2][1] = 0;
+    boxes[2][2] = 0;
+    boxes[2][3] = 0;
+    boxes[2][4] = 1;
+    boxes[2][5] = 1;
+    boxes[2][6] = 0;
+    boxes[2][7] = 0;
+    boxes[2][8] = 0;
+    boxes[2][9] = 0;
+    boxes[3][0] = 0;
+    boxes[3][1] = 0;
+    boxes[3][2] = 0;
+    boxes[3][3] = 0;
+    boxes[3][4] = 1;
+    boxes[3][5] = 1;
+    boxes[3][6] = 0;
+    boxes[3][7] = 0;
+    boxes[3][8] = 0;
+    boxes[3][9] = 0;
+    boxes[4][0] = 1;
+    boxes[4][1] = 1;
+    boxes[4][2] = 0;
+    boxes[4][3] = 0;
+    boxes[4][4] = 1;
+    boxes[4][5] = 1;
+    boxes[4][6] = 0;
+    boxes[4][7] = 0;
+    boxes[4][8] = 0;
+    boxes[4][9] = 0;
+    boxes[5][0] = 0;
+    boxes[5][1] = 0;
+    boxes[5][2] = 0;
+    boxes[5][3] = 0;
+    boxes[5][4] = 0;
+    boxes[5][5] = 1;
+    boxes[5][6] = 0;
+    boxes[5][7] = 0;
+    boxes[5][8] = 0;
+    boxes[5][9] = 0;
+end
+
+integer h;
+integer v;
+always @(posedge clk) begin
+    if(rst)begin
+        for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
+            for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
+                if(blocks[v][h])begin
+                    map[v][h] <= `BLOCK;
+                end else if(boxes[v][h])begin
+                    map[v][h] <= `BOX2;
+                end else begin
+                    map[v][h] <= `WALKOK;
+                end
+            end
+        end
+    end else begin
+        for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
+            for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
+                map[v][h] <= nextMap[v][h];
+            end
+        end
+    end
+end
+
+always @(*) begin
+    for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
+        for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
+            nextMap[v][h] = map[v][h];
+        end
+    end
+end
+
+always @(*) begin
+    for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
+        for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
+            if(boxes[v][h]||blocks[v][h])begin
+                walkAble[(HMAXTILE+1)*v+h] = 0;
+            end else begin
+                walkAble[(HMAXTILE+1)*v+h] = 1;
+            end
+        end
+    end
+end
+
 endmodule

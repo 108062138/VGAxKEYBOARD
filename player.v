@@ -1,8 +1,3 @@
-`define HMAXTILE 4'd9
-`define VMAXTILE 4'd5
-`define HMINTILE 4'd0
-`define VMINTILE 4'd0
-
 module player(
 input wire clk,
 input wire rst,
@@ -11,11 +6,17 @@ input wire up,
 input wire down,
 input wire left,
 input wire right,
+input wire [(HMAXTILE+1)*(VMAXTILE+1):0] walkAble,
 output reg [3:0] curh,
 output reg [3:0] curv
 );
 reg [3:0] nexth;
 reg [3:0] nextv;
+
+parameter HMAXTILE = 9;
+parameter VMAXTILE = 5;
+parameter HMINTILE = 0;
+parameter VMINTILE = 0;
 
 parameter cntHead = 24;
 reg [cntHead:0] cntTime;
@@ -37,7 +38,7 @@ end
 
 always @(posedge clk) begin
     if(rst)begin
-        curh <= `HMINTILE;
+        curh <= HMINTILE;
     end else begin
         curh <= nexth;
     end
@@ -46,16 +47,24 @@ end
 always @(*) begin
     if(cntTime[cntHead])begin
         if(left)begin
-            if(curh<=`HMINTILE)begin
-                nexth = `HMINTILE;
+            if(curh<=HMINTILE)begin
+                nexth = HMINTILE;
             end else begin
-                nexth = curh -1;
+                if( walkAble[(HMAXTILE+1)*curv+curh-1] )begin
+                    nexth = curh - 1;
+                end else begin
+                    nexth = curh;
+                end
             end
         end else if(right)begin
-            if(curh<`HMAXTILE)begin
-                nexth = curh + 1;
+            if(curh<HMAXTILE)begin
+                if( walkAble[(HMAXTILE+1)*curv+curh+1] )begin
+                    nexth = curh+1;
+                end else begin
+                    nexth = curh;
+                end
             end else begin
-                nexth = `HMAXTILE;
+                nexth = HMAXTILE;
             end
         end else begin
             nexth = curh;
@@ -67,7 +76,7 @@ end
 
 always @(posedge clk) begin
     if(rst)begin
-        curv <= `VMINTILE;
+        curv <= VMINTILE;
     end else begin
         curv <= nextv;
     end
@@ -76,16 +85,24 @@ end
 always @(*) begin
     if(cntTime[cntHead])begin
         if(down)begin
-            if(curv<`VMAXTILE)begin
-                nextv = curv + 1;
+            if(curv<VMAXTILE)begin
+                if( walkAble[(HMAXTILE+1)*(curv+1)+curh] )begin
+                    nextv = curv+1;
+                end else begin
+                    nextv = curv;
+                end
             end else begin
-                nextv = `VMAXTILE;
+                nextv = VMAXTILE;
             end
         end else if(up)begin
-            if(curv<=`VMINTILE)begin
-                nextv = `VMINTILE;
+            if(curv<=VMINTILE)begin
+                nextv = VMINTILE;
             end else begin
-                nextv = curv - 1;
+                if( walkAble[(HMAXTILE+1)*(curv-1)+curh] )begin
+                    nextv = curv-1;
+                end else begin
+                    nextv = curv;
+                end
             end
         end else begin
             nextv = curv;

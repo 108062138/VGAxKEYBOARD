@@ -1,7 +1,9 @@
+`define ZERO  4'b0000
 `define SHIFT 4'b0000
 `define ONE   4'b0001
 `define TWO   4'b0010
 `define THREE 4'b0011
+`define FOUR  4'b0100
 `define FIVE  4'b0101
 
 `define BUP    4'b0110
@@ -16,10 +18,7 @@
 `define ENTER 4'b1110
 `define WAIT  4'b1111
 
-`define HMAXTILE 4'd9
-`define VMAXTILE 4'd5
-`define HMINTILE 4'd0
-`define VMINTILE 4'd0
+
 
 `define PLAYERA 2'b00
 `define PLAYERB 2'b01
@@ -27,6 +26,8 @@
 module top(
 input clk,
 input rst,
+input wire uBtn,
+input wire dBtn,
 inout PS2_DATA,
 inout PS2_CLK,
 output [3:0] vgaRed,
@@ -34,7 +35,7 @@ output [3:0] vgaGreen,
 output [3:0] vgaBlue,
 output hsync,
 output vsync,
-output wire [15:0] led,
+output reg [15:0] led,
 output wire [3:0] AN,
 output wire [7:0] SSD
 );
@@ -47,8 +48,8 @@ wire [9:0] v_cnt;  //480
 wire [511:0] key_down;
 wire [8:0] last_change;
 wire key_valid;
-reg [3:0] curKey;
-reg [3:0] nextKey;
+wire [3:0] curKey;
+wire [3:0] nextKey;
 
 wire [3:0] curAh;
 wire [3:0] curAv;
@@ -60,18 +61,86 @@ reg [3:0] displayNum;
 wire [3:0] dummyLed;
 wire [3:0] dummyAN;
 wire clk1hz;
-
 reg [2:0] curState;
 reg [2:0] nextState;
 
-assign led[3:0] = curKey[3:0];
-assign led[15:7] = last_change[8:0];
-assign led[5] = key_valid;
-assign led[3:0] = curKey[3:0];
+reg [3:0] showLed;
+reg [3:0] nextShowLed;
 
-clkDivider #(.divbit(24)) CLKLDIVIDER(.clk(clk),.divclk(clk1hz),.AN(AN[3:0]));
+wire debDBtn,debUBtn;
+wire opDBtn,opUBtn;
+parameter HMAXTILE = 9;
+parameter VMAXTILE = 5;
+parameter HMINTILE = 0;
+parameter VMINTILE = 0;
+
+wire [(HMAXTILE+1)*(VMAXTILE+1):0] walkAble;
+
+clkDivider #(.divbit(23)) CLKLDIVIDER(.clk(clk),.divclk(clk1hz),.AN(AN[3:0]));
+
 
 sevenSegment SEVENSEGEMENT(.i(displayNum),.led(dummyLed),.ssd(SSD),.an(dummyAN));
+
+debounce DEBUP(
+.button(uBtn),
+.clk(clk),
+.res(debUBtn)
+);
+
+onePulse OPUP(
+.clk(clk1hz),
+.pulse(debUBtn),
+.res(opUBtn)
+);
+
+debounce DEBDOWN(
+.button(udtn),
+.clk(clk),
+.res(debDBtn)
+);
+
+onePulse OPDOWN(
+.clk(clk1hz),
+.pulse(debDBtn),
+.res(opDBtn)
+);
+
+always @(*) begin
+    led[15:12] = showLed;
+    case (showLed)
+        `ZERO:   led[9:0] = walkAble[ 9: 0];
+        `ONE:    led[9:0] = walkAble[19:10];
+        `TWO:    led[9:0] = walkAble[29:20];
+        `THREE:  led[9:0] = walkAble[39:30];
+        `FOUR:   led[9:0] = walkAble[49:40];
+        default: led[9:0] = walkAble[59:50];
+    endcase
+end
+
+always @(posedge clk1hz) begin
+    if(rst)begin
+        showLed <= `ZERO;
+    end else begin
+        showLed <= nextShowLed;
+    end
+end
+always @(*) begin
+    if(opUBtn)begin
+        if(showLed>`ZERO)begin
+            nextShowLed = showLed - 1;
+        end else begin
+            nextShowLed = `FIVE;
+        end
+    end else if(opDBtn)begin
+        if(showLed<=`FOUR)begin
+            nextShowLed = showLed + 1;
+        end else begin
+            nextShowLed = `ZERO;
+        end
+    end else begin
+        nextShowLed = showLed;
+    end
+end
 
 clock_divisor clk_wiz_0_inst(.clk(clk),.clk1(clk_25MHz));
 
@@ -83,14 +152,17 @@ pixel_gen pixel_gen_inst(
 .curBh(curBh),
 .curBv(curBv),
 .valid(valid),
+.clk(clk),
+.rst(rst),
 .vgaRed(vgaRed),
 .vgaGreen(vgaGreen),
-.vgaBlue(vgaBlue)
+.vgaBlue(vgaBlue),
+.walkAble(walkAble)
 );
 
 vga_controller   vga_inst(.pclk(clk_25MHz),.reset(rst),.hsync(hsync),.vsync(vsync),.valid(valid),.h_cnt(h_cnt),.v_cnt(v_cnt));
-      
-KeyboardDecoder KEYBOARDDECODER(.key_down(key_down),.last_change(last_change),.key_valid(key_valid),.PS2_DATA(PS2_DATA),.PS2_CLK(PS2_CLK),.rst(rst),.clk(clk));
+
+myKeyBoard MYKEYBOARD__(.clk(clk),.rst(rst),.PS2_DATA(PS2_DATA),.PS2_CLK(PS2_CLK),.key_down(key_down),.last_change(last_change),.curKey(curKey),.nextKey(nextKey));
 
 player PLAYERA(
 .clk(clk),
@@ -100,6 +172,7 @@ player PLAYERA(
 .down(curKey==`TWO),
 .left(curKey==`ONE),
 .right(curKey==`THREE),
+.walkAble(walkAble),
 .curh(curAh),
 .curv(curAv)
 );
@@ -112,70 +185,11 @@ player PLAYERB(
 .down(curKey==`BDOWN),
 .left(curKey==`BLEFT),
 .right(curKey==`BRIGHT),
+.walkAble(walkAble),
 .curh(curBh),
 .curv(curBv)
 );
 
-always @(posedge clk) begin
-    if(rst)begin
-        curKey <= `WAIT;//F for default
-    end else begin
-        if(key_valid)begin//event detect!
-            curKey <= nextKey;
-        end else begin
-            curKey <= curKey;
-        end 
-    end
-end
-
-always @(*) begin
-    if(key_valid)begin
-        if(!key_down[last_change[7:0]])begin
-            //has been press for a while
-            nextKey = `WAIT;
-        end else begin
-            //hadn't been press 
-            case (last_change[7:0])
-                8'h59:begin
-                    nextKey = `SHIFT; 
-                end
-                8'h69:begin
-                    nextKey = `ONE;
-                end 
-                8'h72:begin
-                    nextKey = `TWO;
-                end
-                8'h7A:begin
-                    nextKey = `THREE;
-                end
-                8'h73:begin
-                    nextKey = `FIVE;
-                end
-
-                8'h1D:begin
-                    nextKey = `BUP;
-                end
-                8'h1B:begin
-                    nextKey = `BDOWN;
-                end
-                8'h1C:begin
-                    nextKey = `BLEFT;
-                end
-                8'h23:begin
-                    nextKey = `BRIGHT;
-                end
-                8'h29:begin
-                    nextKey = `SPACE;
-                end
-                default: begin
-                    nextKey = `WAIT;
-                end
-            endcase
-        end 
-    end else begin
-        nextKey = `WAIT;
-    end
-end
 always @(*) begin
     case (AN[3:0])
       4'b1110:begin
@@ -192,4 +206,7 @@ always @(*) begin
       end 
     endcase
 end
+
+
+
 endmodule
