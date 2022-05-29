@@ -1,6 +1,6 @@
 `define FIRE  1'b1
 `define CEASE 1'b0
-`define MAXBOMB 4'd5
+`define MAXBOMB 4'd10
 
 module player(
 input wire clk,
@@ -63,7 +63,7 @@ always @(posedge clk) begin
         end
     end
 end
-parameter bombHead = 26;
+parameter bombHead = 25;
 reg [bombHead:0] bombCD;
 reg [3:0] nextNumBomb;
 always @(posedge clk) begin
@@ -87,7 +87,7 @@ always @(posedge clk) begin
 end
 
 always @(*) begin
-    if(bombPlaceInterval[cntHead])begin
+    if(bombPlaceInterval>{(cntHead-2){1'b1}})begin
         if(attack)begin
             if(numBomb>0)begin
                 nextNumBomb = numBomb - 1;
@@ -118,25 +118,6 @@ always @(*) begin
     end
 end
 
-//always @(posedge clk) begin
-//    if(rst)begin
-//        placeBomb <= 0;
-//    end else begin
-//        placeBomb <= nextPlaceBomb;
-//    end
-//end
-//
-//always @(*) begin
-//    if(walkCD[cntHead])begin
-//        if(attack)begin
-//            nextPlaceBomb = 1;
-//        end else begin
-//            nextPlaceBomb = 0;
-//        end
-//    end else begin
-//        nextPlaceBomb = 0;
-//    end
-//end
 
 always @(posedge clk) begin
     if(rst)begin

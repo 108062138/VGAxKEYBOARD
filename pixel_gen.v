@@ -16,19 +16,19 @@
 `define PATHCOLOR  12'hfff
 `define BLOCKCOLOR 12'h000
 `define BOXCOLOR   12'h669
-`define WATERCOLOR 12'h0f0
+`define WATERCOLOR 12'h00f
 
 `define ACOLOR     12'h6f3
 `define BCOLOR     12'hf55
 
 `define NODIS 4'd15
 
-`define BOX0 4'b0000
-`define BOX1 4'b0001
-`define BOX2 4'b0010
-`define KILL 4'b0011
-`define WALKOK 4'b1110
-`define BLOCK  4'b1111
+`define BOX0   5'b00000
+`define BOX1   5'b00001
+`define BOX2   5'b00010
+`define KILL   5'b00011
+`define WALKOK 5'b11100
+`define BLOCK  5'b11111
 
 module pixel_gen(
 input [9:0] h_cnt,
@@ -48,10 +48,7 @@ output reg [3:0] vgaBlue,
 output reg [(HMAXTILE+1)*(VMAXTILE+1):0] walkAble
 );
 
-parameter HMAXTILE  = 9;
-parameter VMAXTILE  = 5;
-parameter HMINTILE  = 0;
-parameter VMINTILE  = 0;
+parameter HMAXTILE  = 9;parameter VMAXTILE  = 5;parameter HMINTILE  = 0;parameter VMINTILE  = 0;
 
 reg [3:0] hMap;
 reg [3:0] vMap;
@@ -144,8 +141,9 @@ always @(*) begin
     end
 end
 
-reg [3:0] map [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
-reg [3:0] nextMap [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
+
+reg [4:0] map [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
+reg [4:0] nextMap [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
 reg blocks [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
 reg boxes [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
 
@@ -303,20 +301,49 @@ end
 always @(*) begin
     for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
         for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
-            if(atkFromA)begin
-                if(curAh==h&&curAv==v)begin
-                    nextMap[v][h] = `KILL;
-                end else begin
-                    nextMap[v][h] = map[v][h];
-                end
-            end else if(atkFromB)begin
-                if(curBh==h&&curBv==v)begin
-                    nextMap[v][h] = `KILL;
-                end else begin
-                    nextMap[v][h] = map[v][h];
-                end
+            if(countDown[v][h]>0&&countDown[v][h]<{(countDownHead+1){1'b1}})begin
+                nextMap[v][h] = `KILL;
+            end else if(countDown[v][h]=={(countDownHead+1){1'b1}})begin
+                nextMap[v][h] = `WALKOK;
             end else begin
                 nextMap[v][h] = map[v][h];
+            end
+        end
+    end
+end
+
+parameter countDownHead=26;
+reg [countDownHead:0] countDown [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
+reg [countDownHead:0] nextCountDown [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
+always @(posedge clk) begin
+    if(rst)begin
+        for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
+            for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
+                countDown[v][h] <= 0;
+            end
+        end
+    end else begin
+        for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
+            for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
+                countDown[v][h] <= nextCountDown[v][h];
+            end
+        end
+    end
+end
+
+always @(*) begin
+    for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
+        for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
+            if(curAv==v&&curAh==h&&atkFromA)begin
+                nextCountDown[v][h] = 1;
+            end else if(curBv==v&&curBh==h&&atkFromB)begin
+                nextCountDown[v][h] = 1;
+            end else begin
+                if(countDown[v][h]>0)begin
+                    nextCountDown[v][h] = countDown[v][h]+1;
+                end else begin
+                    nextCountDown[v][h] = 0;
+                end
             end
         end
     end
