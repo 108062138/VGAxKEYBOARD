@@ -3,6 +3,10 @@
 `define MAXBOMB 4'd10
 `define PLAYERA 2'b00
 `define PLAYERB 2'b01
+`define ASTARTV 4'b0000
+`define ASTARTH 4'b0000
+`define BSTARTV 4'b0101
+`define BSTARTH 4'b1001
 
 module player(
 input wire clk,
@@ -124,9 +128,9 @@ end
 always @(posedge clk) begin
     if(rst)begin
         if(user==`PLAYERA)begin
-            curh <= HMINTILE;
+            curh <= `ASTARTH;
         end else begin
-            curh <= HMAXTILE;
+            curh <= `BSTARTH;
         end
     end else begin
         curh <= nexth;
@@ -166,9 +170,9 @@ end
 always @(posedge clk) begin
     if(rst)begin
         if(user==`PLAYERA)begin
-            curh <= VMINTILE;
+            curv <= `ASTARTV;
         end else begin
-            curh <= VMAXTILE;
+            curv <= `BSTARTV;
         end
     end else begin
         curv <= nextv;
