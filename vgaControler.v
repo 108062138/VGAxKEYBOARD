@@ -109,22 +109,22 @@ onePulse OPDOWN(
 );
 
 always @(*) begin
-    led[15:12] = showLed;
-    
-    led[9] = ABomb;
-    led[8:5] = aNumOfBumbs;
-
-    led[4] = BBomb;
-    led[3:0] = bNumOfBumbs;
+    //led[15:12] = showLed;
+    //
+    //led[9] = ABomb;
+    //led[8:5] = aNumOfBumbs;
+//
+    //led[4] = BBomb;
+    //led[3:0] = bNumOfBumbs;
     //show map
-    //case (showLed)
-    //    `ZERO:   led[9:0] = walkAble[ 9: 0];
-    //    `ONE:    led[9:0] = walkAble[19:10];
-    //    `TWO:    led[9:0] = walkAble[29:20];
-    //    `THREE:  led[9:0] = walkAble[39:30];
-    //    `FOUR:   led[9:0] = walkAble[49:40];
-    //    default: led[9:0] = walkAble[59:50];
-    //endcase
+    case (showLed)
+        `ZERO:   led[9:0] = walkAble[ 9: 0];
+        `ONE:    led[9:0] = walkAble[19:10];
+        `TWO:    led[9:0] = walkAble[29:20];
+        `THREE:  led[9:0] = walkAble[39:30];
+        `FOUR:   led[9:0] = walkAble[49:40];
+        default: led[9:0] = walkAble[59:50];
+    endcase
 end
 
 always @(posedge clk1hz) begin

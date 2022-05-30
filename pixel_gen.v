@@ -16,14 +16,14 @@
 `define NINE  4'b1001
 `define TEN   4'b1010
 /*R G*/
-`define PATHCOLOR  12'hfff
-`define BLOCKCOLOR 12'h000
-`define BOXCOLOR   12'h669
-`define WATERCOLOR 12'h008
+`define PATHCOLOR   12'hfff
+`define BLOCKCOLOR  12'h000
+`define BOXCOLOR    12'h669
+`define WATERCOLOR  12'h008
 `define KILLERCOLOR 12'h088
 
-`define ACOLOR     12'h6f3
-`define BCOLOR     12'hf55
+`define ACOLOR      12'h6f3
+`define BCOLOR      12'hf55
 
 `define NODIS 4'd15
 
@@ -123,7 +123,7 @@ always @(*) begin
         end else begin
             if(blocks[vMap][hMap])begin
                 {vgaRed, vgaGreen, vgaBlue} = `BLOCK;
-            end else if(boxes[vMap][hMap]) begin
+            end else if(boxes[vMap][hMap]&&(explodedBoxes[vMap][hMap]==0)) begin
                 {vgaRed, vgaGreen, vgaBlue} = `BOXCOLOR;
             end else if(map[vMap][hMap]==`ABOUTTOBOMB)begin
                 if(countDown[vMap][hMap]<{(countDownHead-1){1'b1}})begin
@@ -337,6 +337,32 @@ always @(posedge clk) begin
     end
 end
 reg explosionArea [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
+reg explodedBoxes [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
+reg nextExplodedBoxes [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
+
+always @(posedge clk) begin
+    if(rst)begin
+        for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
+            for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
+                explodedBoxes[v][h] = 0;
+            end
+        end
+    end else begin
+        for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
+            for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
+                explodedBoxes[v][h] <= nextExplodedBoxes[v][h];
+            end
+        end
+    end
+end
+always @(*) begin
+    for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
+        for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
+            nextExplodedBoxes[v][h] = boxes[v][h]&(explodedBoxes[v][h] | explosionArea[v][h]); 
+        end
+    end
+end
+
 always @(*) begin
     //NORMAL CASE
     for(v=VMINTILE+1;v<VMAXTILE;v=v+1)begin
@@ -504,7 +530,7 @@ end
 always @(*) begin
     for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
         for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
-            if(boxes[v][h]||blocks[v][h])begin
+            if((explodedBoxes[v][h]!=boxes[v][h])||blocks[v][h])begin
                 walkAble[(HMAXTILE+1)*v+h] = 0;
             end else begin
                 walkAble[(HMAXTILE+1)*v+h] = 1;
