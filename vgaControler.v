@@ -59,7 +59,8 @@ wire [3:0] curBv;
 wire [3:0] bNumOfBumbs;
 
 wire ABomb,BBomb;
-
+wire hitA,hitB;
+wire ACanMove,BCanMove,AWin,BWin;
 reg [3:0] displayNum;
 wire [3:0] dummyLed;
 wire [3:0] dummyAN;
@@ -84,29 +85,48 @@ clkDivider #(.divbit(23)) CLKLDIVIDER(.clk(clk),.divclk(clk1hz),.AN(AN[3:0]));
 
 sevenSegment SEVENSEGEMENT(.i(displayNum),.led(dummyLed),.ssd(SSD),.an(dummyAN));
 
-debounce DEBUP(
-.button(uBtn),
-.clk(clk),
-.res(debUBtn)
-);
+debounce DEBUP(.button(uBtn),.clk(clk),.res(debUBtn));
 
-onePulse OPUP(
-.clk(clk1hz),
-.pulse(debUBtn),
-.res(opUBtn)
-);
+onePulse OPUP(.clk(clk1hz),.pulse(debUBtn),.res(opUBtn));
 
-debounce DEBDOWN(
-.button(udtn),
-.clk(clk),
-.res(debDBtn)
-);
+debounce DEBDOWN(.button(udtn),.clk(clk),.res(debDBtn));
 
-onePulse OPDOWN(
-.clk(clk1hz),
-.pulse(debDBtn),
-.res(opDBtn)
-);
+onePulse OPDOWN(.clk(clk1hz),.pulse(debDBtn),.res(opDBtn));
+
+reg [3:0] numAWin;
+reg [3:0] numBWin;
+reg [3:0] nextNumAWin;
+reg [3:0] nextNumBWin;
+always @(posedge clk) begin
+    if(rst)begin
+        numAWin <= `ZERO;
+        numBWin <= `ZERO;
+    end else begin
+        numAWin <= nextNumAWin;
+        numBWin <= nextNumBWin;
+    end
+end
+always @(*) begin
+    if(AWin==1)begin
+        if(numAWin==`FOUR)begin
+            nextNumAWin = `ZERO;
+        end else begin
+            nextNumAWin = numAWin + 1;
+        end
+    end else begin
+        nextNumAWin = numAWin;
+    end
+
+    if(BWin==1)begin
+        if(numBWin==`FOUR)begin
+            nextNumBWin = `ZERO;
+        end else begin
+            nextNumBWin = numBWin + 1;
+        end
+    end else begin
+        nextNumBWin = numBWin;
+    end
+end
 
 always @(*) begin
     //led[15:12] = showLed;
@@ -117,14 +137,25 @@ always @(*) begin
     //led[4] = BBomb;
     //led[3:0] = bNumOfBumbs;
     //show map
-    case (showLed)
-        `ZERO:   led[9:0] = walkAble[ 9: 0];
-        `ONE:    led[9:0] = walkAble[19:10];
-        `TWO:    led[9:0] = walkAble[29:20];
-        `THREE:  led[9:0] = walkAble[39:30];
-        `FOUR:   led[9:0] = walkAble[49:40];
-        default: led[9:0] = walkAble[59:50];
-    endcase
+    if(AWin||BWin)begin
+        if(AWin)begin
+            led[15:8] = 8'hff;
+            led[7:0] = 8'h0;
+            
+        end else begin
+            led[15:8] = 8'h0;
+            led[7:0] = 8'hff;
+        end
+    end else begin
+        case (showLed)
+            `ZERO:   led[9:0] = walkAble[ 9: 0];
+            `ONE:    led[9:0] = walkAble[19:10];
+            `TWO:    led[9:0] = walkAble[29:20];
+            `THREE:  led[9:0] = walkAble[39:30];
+            `FOUR:   led[9:0] = walkAble[49:40];
+            default: led[9:0] = walkAble[59:50];
+        endcase
+    end
 end
 
 always @(posedge clk1hz) begin
@@ -163,13 +194,32 @@ pixel_gen pixel_gen_inst(
 .curBv(curBv),
 .valid(valid),
 .clk(clk),
-.rst(rst),
-.atkFromA(curKey==`SHIFT),
-.atkFromB(curKey==`SPACE),
+.rst(rst||AWin||BWin),
+.atkFromA(ACanMove&&curKey==`SHIFT),
+.atkFromB(BCanMove&&curKey==`SPACE),
+.ACanMove(ACanMove),
+.BCanMove(BCanMove),
 .vgaRed(vgaRed),
 .vgaGreen(vgaGreen),
 .vgaBlue(vgaBlue),
-.walkAble(walkAble)
+.walkAble(walkAble),
+.hitA(hitA),
+.hitB(hitB)
+);
+
+hitBoxControler (
+.clk(clk),
+.rst(rst||AWin||BWin),
+.hitA(hitA),
+.hitB(hitB),
+.curAv(curAv),
+.curAh(curAh),
+.curBv(curBv),
+.curBh(curBh),
+.ACanMove(ACanMove),
+.BCanMove(BCanMove),
+.AWin(AWin),
+.BWin(BWin)
 );
 
 vga_controller   vga_inst(.pclk(clk_25MHz),.reset(rst),.hsync(hsync),.vsync(vsync),.valid(valid),.h_cnt(h_cnt),.v_cnt(v_cnt));
@@ -178,13 +228,13 @@ myKeyBoard MYKEYBOARD__(.clk(clk),.rst(rst),.PS2_DATA(PS2_DATA),.PS2_CLK(PS2_CLK
 
 player PLAYERA(
 .clk(clk),
-.rst(rst),
+.rst(rst||AWin||BWin),
 .user(`PLAYERA),
-.up(curKey==`FIVE),
-.down(curKey==`TWO),
-.left(curKey==`ONE),
-.right(curKey==`THREE),
-.attack(curKey==`SHIFT),
+.up(    ACanMove&&curKey==`FIVE),
+.down(  ACanMove&&curKey==`TWO),
+.left(  ACanMove&&curKey==`ONE),
+.right( ACanMove&&curKey==`THREE),
+.attack(ACanMove&&curKey==`SHIFT),
 .walkAble(walkAble),
 .curh(curAh),
 .curv(curAv),
@@ -194,13 +244,13 @@ player PLAYERA(
 
 player PLAYERB(
 .clk(clk),
-.rst(rst),
+.rst(rst||AWin||BWin),
 .user(`PLAYERB),
-.up(curKey==`BUP),
-.down(curKey==`BDOWN),
-.left(curKey==`BLEFT),
-.right(curKey==`BRIGHT),
-.attack(curKey==`SPACE),
+.up(    BCanMove&&curKey==`BUP),
+.down(  BCanMove&&curKey==`BDOWN),
+.left(  BCanMove&&curKey==`BLEFT),
+.right( BCanMove&&curKey==`BRIGHT),
+.attack(BCanMove&&curKey==`SPACE),
 .walkAble(walkAble),
 .curh(curBh),
 .curv(curBv),
@@ -211,16 +261,16 @@ player PLAYERB(
 always @(*) begin
     case (AN[3:0])
       4'b1110:begin
-          displayNum = curBv;
+          displayNum = numBWin;
       end 
       4'b1101:begin
-          displayNum = curBh;
+          displayNum = 4'b1011;
       end
       4'b1011:begin
-          displayNum = `WAIT;
+          displayNum = numAWin;
       end 
       default:begin
-          displayNum = curKey;
+          displayNum = 4'b1010;
       end 
     endcase
 end

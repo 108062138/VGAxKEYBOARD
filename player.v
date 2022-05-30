@@ -1,6 +1,8 @@
 `define FIRE  1'b1
 `define CEASE 1'b0
 `define MAXBOMB 4'd10
+`define PLAYERA 2'b00
+`define PLAYERB 2'b01
 
 module player(
 input wire clk,
@@ -121,7 +123,11 @@ end
 
 always @(posedge clk) begin
     if(rst)begin
-        curh <= HMINTILE;
+        if(user==`PLAYERA)begin
+            curh <= HMINTILE;
+        end else begin
+            curh <= HMAXTILE;
+        end
     end else begin
         curh <= nexth;
     end
@@ -159,7 +165,11 @@ end
 
 always @(posedge clk) begin
     if(rst)begin
-        curv <= VMINTILE;
+        if(user==`PLAYERA)begin
+            curh <= VMINTILE;
+        end else begin
+            curh <= VMAXTILE;
+        end
     end else begin
         curv <= nextv;
     end

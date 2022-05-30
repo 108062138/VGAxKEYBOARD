@@ -1,6 +1,7 @@
 `define UNIT 10'd64
 `define HALFUNIT 10'd32 
 `define HALFUNIT 10'd32 
+`define BUBBLEUNIT 10'd29
 `define QUARTERUNIT 10'd16
 `define ONE8UNIT 10'd8
 `define ONE16UNIT 10'd4
@@ -21,7 +22,7 @@
 `define BOXCOLOR    12'h669
 `define WATERCOLOR  12'h008
 `define KILLERCOLOR 12'h088
-
+`define HITCOLOR    12'h123
 `define ACOLOR      12'h6f3
 `define BCOLOR      12'hf55
 
@@ -47,10 +48,14 @@ input clk,
 input rst,
 input wire atkFromA,
 input wire atkFromB,
+input wire ACanMove,
+input wire BCanMove,
 output reg [3:0] vgaRed,
 output reg [3:0] vgaGreen,
 output reg [3:0] vgaBlue,
-output reg [(HMAXTILE+1)*(VMAXTILE+1):0] walkAble
+output reg [(HMAXTILE+1)*(VMAXTILE+1):0] walkAble,
+output reg hitA,
+output reg hitB
 );
 
 parameter HMAXTILE  = 9;parameter VMAXTILE  = 5;parameter HMINTILE  = 0;parameter VMINTILE  = 0;
@@ -118,8 +123,12 @@ always @(*) begin
     end else begin
         if(curAh==hMap && curAv==vMap && (playerACircle<`QUARTERUNIT*`QUARTERUNIT))begin
             {vgaRed, vgaGreen, vgaBlue} = `ACOLOR;
+        end else if(curAh==hMap && curAv==vMap && (playerACircle<`HALFUNIT*`HALFUNIT)&&(playerACircle>`BUBBLEUNIT*`BUBBLEUNIT)&&!ACanMove)begin
+            {vgaRed, vgaGreen, vgaBlue} = `HITCOLOR;
         end else if(curBh==hMap && curBv==vMap && (playerBCircle<`QUARTERUNIT*`QUARTERUNIT))begin 
             {vgaRed, vgaGreen, vgaBlue} = `BCOLOR;
+        end else if(curBh==hMap && curBv==vMap && (playerBCircle<`HALFUNIT*`HALFUNIT)&&(playerBCircle>`BUBBLEUNIT*`BUBBLEUNIT)&&!BCanMove)begin
+            {vgaRed, vgaGreen, vgaBlue} = `HITCOLOR;
         end else begin
             if(blocks[vMap][hMap])begin
                 {vgaRed, vgaGreen, vgaBlue} = `BLOCK;
@@ -536,6 +545,19 @@ always @(*) begin
                 walkAble[(HMAXTILE+1)*v+h] = 1;
             end
         end
+    end
+end
+
+always @(*) begin
+    if(explosionArea[curAv][curAh])begin
+        hitA = 1;
+    end else begin
+        hitA = 0;
+    end
+    if(explosionArea[curBv][curBh])begin
+        hitB = 1;
+    end else begin
+        hitB = 0;
     end
 end
 
