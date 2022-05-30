@@ -1,6 +1,9 @@
 `define UNIT 10'd64
 `define HALFUNIT 10'd32 
+`define HALFUNIT 10'd32 
 `define QUARTERUNIT 10'd16
+`define ONE8UNIT 10'd8
+`define ONE16UNIT 10'd4
 `define ZERO  4'b0000
 `define ONE   4'b0001
 `define TWO   4'b0010
@@ -12,23 +15,25 @@
 `define EIGHT 4'b1000
 `define NINE  4'b1001
 `define TEN   4'b1010
-
+/*R G*/
 `define PATHCOLOR  12'hfff
 `define BLOCKCOLOR 12'h000
 `define BOXCOLOR   12'h669
-`define WATERCOLOR 12'h00f
+`define WATERCOLOR 12'h008
+`define KILLERCOLOR 12'h088
 
 `define ACOLOR     12'h6f3
 `define BCOLOR     12'hf55
 
 `define NODIS 4'd15
 
-`define BOX0   5'b00000
-`define BOX1   5'b00001
-`define BOX2   5'b00010
-`define KILL   5'b00011
-`define WALKOK 5'b11100
-`define BLOCK  5'b11111
+`define BOX0          5'b00000
+`define BOX1          5'b00001
+`define BOX2          5'b00010
+`define ABOUTTOBOMB   5'b00011
+`define EXPLOSION     5'b00100
+`define WALKOK        5'b11100
+`define BLOCK         5'b11111
 
 module pixel_gen(
 input [9:0] h_cnt,
@@ -60,6 +65,10 @@ reg [19:0] playerACircle;
 reg [9:0] centerBh;
 reg [9:0] centerBv;
 reg [19:0] playerBCircle;
+
+reg [9:0] centerMapV;
+reg [9:0] centerMapH;
+reg [19:0] mapCircle;
 
 always @(*) begin
     if(!valid)begin
@@ -97,6 +106,10 @@ always @(*) begin
     centerBh = curBh*`UNIT+`HALFUNIT;
     centerBv = curBv*`UNIT+`HALFUNIT;
     playerBCircle = (centerBh-h_cnt)*(centerBh-h_cnt) + (centerBv-v_cnt)*(centerBv-v_cnt);
+
+    centerMapH = hMap*`UNIT+`HALFUNIT;
+    centerMapV = vMap*`UNIT+`HALFUNIT;
+    mapCircle = (centerMapH-h_cnt)*(centerMapH-h_cnt) + (centerMapV-v_cnt)*(centerMapV-v_cnt);
 end
 
 always @(*) begin
@@ -112,8 +125,34 @@ always @(*) begin
                 {vgaRed, vgaGreen, vgaBlue} = `BLOCK;
             end else if(boxes[vMap][hMap]) begin
                 {vgaRed, vgaGreen, vgaBlue} = `BOXCOLOR;
-            end else if(map[vMap][hMap]==`KILL)begin
-                {vgaRed, vgaGreen, vgaBlue} = `WATERCOLOR;
+            end else if(map[vMap][hMap]==`ABOUTTOBOMB)begin
+                if(countDown[vMap][hMap]<{(countDownHead-1){1'b1}})begin
+                    if(mapCircle<`ONE16UNIT*`ONE16UNIT)begin
+                        {vgaRed, vgaGreen, vgaBlue} = `WATERCOLOR;
+                    end else begin
+                        {vgaRed, vgaGreen, vgaBlue} = `PATHCOLOR;
+                    end
+                end else if(countDown[vMap][hMap]<{(countDownHead){1'b1}})begin
+                    if(mapCircle<`ONE8UNIT*`ONE8UNIT)begin
+                        {vgaRed, vgaGreen, vgaBlue} = `WATERCOLOR;
+                    end else begin
+                        {vgaRed, vgaGreen, vgaBlue} = `PATHCOLOR;
+                    end
+                end else if(countDown[vMap][hMap]<{(countDownHead){1'b1}}+{(countDownHead-1){1'b1}})begin
+                    if(mapCircle<`QUARTERUNIT*`QUARTERUNIT)begin
+                        {vgaRed, vgaGreen, vgaBlue} = `WATERCOLOR;
+                    end else begin
+                        {vgaRed, vgaGreen, vgaBlue} = `PATHCOLOR;
+                    end
+                end else begin
+                    if(mapCircle<`HALFUNIT*`HALFUNIT)begin
+                        {vgaRed, vgaGreen, vgaBlue} = `WATERCOLOR;
+                    end else begin
+                        {vgaRed, vgaGreen, vgaBlue} = `PATHCOLOR;
+                    end
+                end
+            end else if(map[vMap][hMap]==`EXPLOSION)begin
+                {vgaRed, vgaGreen, vgaBlue} = `KILLERCOLOR;
             end else begin
                 {vgaRed, vgaGreen, vgaBlue} = `PATHCOLOR;
             end
@@ -302,8 +341,10 @@ always @(*) begin
     for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
         for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
             if(countDown[v][h]>0&&countDown[v][h]<{(countDownHead+1){1'b1}})begin
-                nextMap[v][h] = `KILL;
+                nextMap[v][h] = `ABOUTTOBOMB;
             end else if(countDown[v][h]=={(countDownHead+1){1'b1}})begin
+                nextMap[v][h] = `EXPLOSION;
+            end else if(explosionDown[v][h]=={(explosionHead+1){1'b1}})begin
                 nextMap[v][h] = `WALKOK;
             end else begin
                 nextMap[v][h] = map[v][h];
@@ -348,6 +389,43 @@ always @(*) begin
         end
     end
 end
+
+//
+parameter explosionHead=23;
+reg [explosionHead:0] explosionDown [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
+reg [explosionHead:0] nextExplosionDown [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
+always @(posedge clk) begin
+    if(rst)begin
+        for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
+            for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
+                explosionDown[v][h] <= 0;
+            end
+        end
+    end else begin
+        for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
+            for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
+                explosionDown[v][h] <= nextExplosionDown[v][h];
+            end
+        end
+    end
+end
+
+always @(*) begin
+    for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
+        for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
+            if(countDown[v][h]=={(countDownHead+1){1'b1}})begin
+                nextExplosionDown[v][h] = 1;
+            end else begin
+                if(explosionDown[v][h]>0)begin
+                    nextExplosionDown[v][h] = explosionDown[v][h] + 1;
+                end else begin
+                    nextExplosionDown[v][h] = 0;
+                end
+            end
+        end
+    end
+end
+//
 
 always @(*) begin
     for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
