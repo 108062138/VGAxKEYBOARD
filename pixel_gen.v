@@ -151,7 +151,7 @@ always @(*) begin
                         {vgaRed, vgaGreen, vgaBlue} = `PATHCOLOR;
                     end
                 end
-            end else if(map[vMap][hMap]==`EXPLOSION)begin
+            end else if(map[vMap][hMap]==`EXPLOSION || explosionArea[vMap][hMap])begin
                 {vgaRed, vgaGreen, vgaBlue} = `KILLERCOLOR;
             end else begin
                 {vgaRed, vgaGreen, vgaBlue} = `PATHCOLOR;
@@ -336,16 +336,90 @@ always @(posedge clk) begin
         end
     end
 end
-
+reg explosionArea [VMAXTILE:VMINTILE][HMAXTILE:HMINTILE];
+always @(*) begin
+    //NORMAL CASE
+    for(v=VMINTILE+1;v<VMAXTILE;v=v+1)begin
+        for(h=HMINTILE+1;h<HMAXTILE;h=h+1)begin
+            if         (explosionDown[v    ][h - 1]>0) begin explosionArea [v][h] = 1;
+            end else if(explosionDown[v    ][h + 1]>0) begin explosionArea [v][h] = 1;
+            end else if(explosionDown[v - 1][h    ]>0) begin explosionArea [v][h] = 1;
+            end else if(explosionDown[v + 1][h    ]>0) begin explosionArea [v][h] = 1;
+            end else if(explosionDown[v    ][h    ]>0) begin explosionArea [v][h] = 1;
+            end else                                   begin explosionArea [v][h] = 0;
+            end
+        end
+    end
+    //UP STICK
+    for(h=HMINTILE+1;h<HMAXTILE;h=h+1)begin
+        if         (explosionDown[VMINTILE    ][h - 1]>0) begin explosionArea [VMINTILE][h] = 1;
+        end else if(explosionDown[VMINTILE    ][h + 1]>0) begin explosionArea [VMINTILE][h] = 1;
+        end else if(explosionDown[VMINTILE + 1][h    ]>0) begin explosionArea [VMINTILE][h] = 1;
+        end else if(explosionDown[VMINTILE    ][h    ]>0) begin explosionArea [VMINTILE][h] = 1;
+        end else                                          begin explosionArea [VMINTILE][h] = 0;
+        end
+    end
+    //DOWN STICK
+    for(h=HMINTILE+1;h<HMAXTILE;h=h+1)begin
+        if         (explosionDown[VMAXTILE    ][h - 1]>0) begin explosionArea [VMAXTILE][h] = 1;
+        end else if(explosionDown[VMAXTILE    ][h + 1]>0) begin explosionArea [VMAXTILE][h] = 1;
+        end else if(explosionDown[VMAXTILE - 1][h    ]>0) begin explosionArea [VMAXTILE][h] = 1;
+        end else if(explosionDown[VMAXTILE    ][h    ]>0) begin explosionArea [VMAXTILE][h] = 1;
+        end else                                          begin explosionArea [VMAXTILE][h] = 0;
+        end
+    end
+    //LEFT STICK
+    for(v=VMINTILE+1;v<VMAXTILE;v=v+1)begin
+        if         (explosionDown[v    ][HMINTILE + 1]>0) begin explosionArea [v][HMINTILE] = 1;
+        end else if(explosionDown[v + 1][HMINTILE    ]>0) begin explosionArea [v][HMINTILE] = 1;
+        end else if(explosionDown[v - 1][HMINTILE    ]>0) begin explosionArea [v][HMINTILE] = 1;
+        end else if(explosionDown[v    ][HMINTILE    ]>0) begin explosionArea [v][HMINTILE] = 1;
+        end else                                          begin explosionArea [v][HMINTILE] = 0; 
+        end
+    end
+    //RIGHT STICK
+    for(v=VMINTILE+1;v<VMAXTILE;v=v+1)begin
+        if         (explosionDown[v    ][HMAXTILE - 1]>0) begin explosionArea [v][HMAXTILE] = 1;
+        end else if(explosionDown[v + 1][HMAXTILE    ]>0) begin explosionArea [v][HMAXTILE] = 1;
+        end else if(explosionDown[v - 1][HMAXTILE    ]>0) begin explosionArea [v][HMAXTILE] = 1;
+        end else if(explosionDown[v    ][HMAXTILE    ]>0) begin explosionArea [v][HMAXTILE] = 1;
+        end else                                          begin explosionArea [v][HMAXTILE] = 0; 
+        end
+    end
+    //UP LEFT
+    if         (explosionDown[VMINTILE    ][HMINTILE + 1]>0) begin explosionArea [VMINTILE][HMINTILE] = 1;
+    end else if(explosionDown[VMINTILE + 1][HMINTILE    ]>0) begin explosionArea [VMINTILE][HMINTILE] = 1;
+    end else if(explosionDown[VMINTILE    ][HMINTILE    ]>0) begin explosionArea [VMINTILE][HMINTILE] = 1;
+    end else                                                 begin explosionArea [VMINTILE][HMINTILE] = 0; 
+    end
+    //UP RIGHT
+    if         (explosionDown[VMINTILE    ][HMAXTILE - 1]>0) begin explosionArea [VMINTILE][HMAXTILE] = 1;
+    end else if(explosionDown[VMINTILE + 1][HMAXTILE    ]>0) begin explosionArea [VMINTILE][HMAXTILE] = 1;
+    end else if(explosionDown[VMINTILE    ][HMAXTILE    ]>0) begin explosionArea [VMINTILE][HMAXTILE] = 1;
+    end else                                                 begin explosionArea [VMINTILE][HMAXTILE] = 0; 
+    end
+    //DOWN LEFT
+    if         (explosionDown[VMAXTILE    ][HMINTILE + 1]>0) begin explosionArea [VMAXTILE][HMINTILE] = 1;
+    end else if(explosionDown[VMAXTILE - 1][HMINTILE    ]>0) begin explosionArea [VMAXTILE][HMINTILE] = 1;
+    end else if(explosionDown[VMAXTILE    ][HMINTILE    ]>0) begin explosionArea [VMAXTILE][HMINTILE] = 1;
+    end else                                                 begin explosionArea [VMAXTILE][HMINTILE] = 0; 
+    end
+    //DOWN RIGHT
+    if         (explosionDown[VMAXTILE    ][HMAXTILE - 1]>0) begin explosionArea [VMAXTILE][HMAXTILE] = 1;
+    end else if(explosionDown[VMAXTILE - 1][HMAXTILE    ]>0) begin explosionArea [VMAXTILE][HMAXTILE] = 1;
+    end else if(explosionDown[VMAXTILE    ][HMAXTILE    ]>0) begin explosionArea [VMAXTILE][HMAXTILE] = 1;
+    end else                                                 begin explosionArea [VMAXTILE][HMAXTILE] = 0; 
+    end
+end
 always @(*) begin
     for(v=VMINTILE;v<=VMAXTILE;v=v+1)begin
         for(h=HMINTILE;h<=HMAXTILE;h=h+1)begin
             if(countDown[v][h]>0&&countDown[v][h]<{(countDownHead+1){1'b1}})begin
                 nextMap[v][h] = `ABOUTTOBOMB;
-            end else if(countDown[v][h]=={(countDownHead+1){1'b1}})begin
-                nextMap[v][h] = `EXPLOSION;
             end else if(explosionDown[v][h]=={(explosionHead+1){1'b1}})begin
                 nextMap[v][h] = `WALKOK;
+            end else if(countDown[v][h]=={(countDownHead+1){1'b1}})begin
+                nextMap[v][h] = `EXPLOSION;
             end else begin
                 nextMap[v][h] = map[v][h];
             end
