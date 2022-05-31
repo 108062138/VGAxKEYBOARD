@@ -109,7 +109,7 @@ end
 always @(*) begin
     if(AWin==1)begin
         if(numAWin==`FOUR)begin
-            nextNumAWin = `ZERO;
+            nextNumAWin = `FOUR;
         end else begin
             nextNumAWin = numAWin + 1;
         end
@@ -119,7 +119,7 @@ always @(*) begin
 
     if(BWin==1)begin
         if(numBWin==`FOUR)begin
-            nextNumBWin = `ZERO;
+            nextNumBWin = `FOUR;
         end else begin
             nextNumBWin = numBWin + 1;
         end
@@ -129,14 +129,6 @@ always @(*) begin
 end
 
 always @(*) begin
-    //led[15:12] = showLed;
-    //
-    //led[9] = ABomb;
-    //led[8:5] = aNumOfBumbs;
-//
-    //led[4] = BBomb;
-    //led[3:0] = bNumOfBumbs;
-    //show map
     if(AWin||BWin)begin
         if(AWin)begin
             led[15:8] = 8'hff;
@@ -199,6 +191,8 @@ pixel_gen pixel_gen_inst(
 .atkFromB(BCanMove&&curKey==`SPACE),
 .ACanMove(ACanMove),
 .BCanMove(BCanMove),
+.numAWin(numAWin),
+.numBWin(numBWin),
 .vgaRed(vgaRed),
 .vgaGreen(vgaGreen),
 .vgaBlue(vgaBlue),
@@ -261,16 +255,16 @@ player PLAYERB(
 always @(*) begin
     case (AN[3:0])
       4'b1110:begin
-          displayNum = numBWin;
-      end 
-      4'b1101:begin
-          displayNum = 4'b1011;
-      end
-      4'b1011:begin
           displayNum = numAWin;
       end 
-      default:begin
+      4'b1101:begin
           displayNum = 4'b1010;
+      end
+      4'b1011:begin
+          displayNum = numBWin;
+      end 
+      default:begin
+          displayNum = 4'b1011;
       end 
     endcase
 end

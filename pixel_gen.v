@@ -16,6 +16,9 @@
 `define EIGHT 4'b1000
 `define NINE  4'b1001
 `define TEN   4'b1010
+
+`define TOTALHEALTH 4'b0100
+
 /*R G*/
 `define PATHCOLOR   12'hfff
 `define BLOCKCOLOR  12'h000
@@ -50,6 +53,8 @@ input wire atkFromA,
 input wire atkFromB,
 input wire ACanMove,
 input wire BCanMove,
+input wire [3:0] numAWin,
+input wire [3:0] numBWin,
 output reg [3:0] vgaRed,
 output reg [3:0] vgaGreen,
 output reg [3:0] vgaBlue,
@@ -74,6 +79,12 @@ reg [19:0] playerBCircle;
 reg [9:0] centerMapV;
 reg [9:0] centerMapH;
 reg [19:0] mapCircle;
+
+wire [3:0] AHealth;
+wire [3:0] BHealth;
+
+assign AHealth = `TOTALHEALTH - numBWin;
+assign BHealth = `TOTALHEALTH - numAWin;
 
 always @(*) begin
     if(!valid)begin
@@ -119,7 +130,23 @@ end
 
 always @(*) begin
     if(hMap==`NODIS || vMap==`NODIS)begin
-        {vgaRed, vgaGreen, vgaBlue} = `BLOCK;
+        if(v_cnt>430&&v_cnt<450)begin
+            if(h_cnt<320)begin
+                if(h_cnt<`UNIT*BHealth)begin
+                    {vgaRed, vgaGreen, vgaBlue} = `BCOLOR;
+                end else begin
+                    {vgaRed, vgaGreen, vgaBlue} = `BLOCK;
+                end
+            end else begin
+                if(h_cnt>640-`UNIT*AHealth)begin
+                    {vgaRed, vgaGreen, vgaBlue} = `ACOLOR;
+                end else begin
+                    {vgaRed, vgaGreen, vgaBlue} = `BLOCK;
+                end
+            end
+        end else begin
+            {vgaRed, vgaGreen, vgaBlue} = `BLOCK;
+        end
     end else begin
         if(curAh==hMap && curAv==vMap && (playerACircle<`QUARTERUNIT*`QUARTERUNIT))begin
             {vgaRed, vgaGreen, vgaBlue} = `ACOLOR;

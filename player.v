@@ -3,10 +3,10 @@
 `define MAXBOMB 4'd10
 `define PLAYERA 2'b00
 `define PLAYERB 2'b01
-`define ASTARTV 4'b0000
-`define ASTARTH 4'b0000
-`define BSTARTV 4'b0101
-`define BSTARTH 4'b1001
+`define BSTARTV 4'b0000
+`define BSTARTH 4'b0000
+`define ASTARTV 4'b0101
+`define ASTARTH 4'b1001
 
 module player(
 input wire clk,
