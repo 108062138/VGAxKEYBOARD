@@ -40,7 +40,6 @@ output wire [3:0] AN,
 output wire [7:0] SSD
 );
 
-
 wire clk_25MHz;
 wire valid;
 wire [9:0] h_cnt; //640
@@ -139,6 +138,12 @@ always @(*) begin
             led[7:0] = 8'hff;
         end
     end else begin
+        //led[15:14] = fkled[1:0];
+        //led[13] = fkled[7];
+        //led[12] = fkled[6];
+        //led[11] = fkled[5];
+        //led[10] = fkled[4];
+
         case (showLed)
             `ZERO:   led[9:0] = walkAble[ 9: 0];
             `ONE:    led[9:0] = walkAble[19:10];
@@ -268,7 +273,5 @@ always @(*) begin
       end 
     endcase
 end
-
-
 
 endmodule
